@@ -1,0 +1,32 @@
+name: Compila Wii
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: devkitpro/devkitppc:latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installa dipendenze
+        run: |
+          dkp-pacman -Syu --noconfirm
+          dkp-pacman -S --noconfirm libogc libfat-ogc ppc-freetype ppc-libpng ppc-libjpeg-turbo ppc-zlib ppc-bzip2 git make
+
+      - name: Compila GRRLIB
+        run: |
+          git clone --depth 1 https://github.com/GRRLIB/GRRLIB.git
+          cd GRRLIB/GRRLIB
+          make clean all install
+
+      - name: Compila il gioco
+        run: make
+
+      - name: Salva il risultato
+        uses: actions/upload-artifact@v4
+        with:
+          name: miihorror
+          path: boot.dol
