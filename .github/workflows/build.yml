@@ -26,17 +26,35 @@ jobs:
         run: |
           INC=$(dirname "$(find / -name grrlib.h 2>/dev/null | head -n 1)")
           LIB=$(dirname "$(find / -name libgrrlib.a 2>/dev/null | head -n 1)")
-          echo "INC=$INC"
-          echo "LIB=$LIB"
           PORT=$DEVKITPRO/portlibs/ppc
           GCC=$DEVKITPPC/bin/powerpc-eabi-gcc
           MACH="-DGEKKO -mrvl -mcpu=750 -meabi -mhard-float"
+          BASEINC="-I$DEVKITPRO/libogc/include -I$PORT/include -I$PORT/include/freetype2"
+
+          echo "--- ricerca PNGU ---"
+          find / -iname "*pngu*" 2>/dev/null | grep -v "^/proc" | head -n 20
+
           BROTLI=""
           if [ -f $PORT/lib/libbrotlidec.a ]; then BROTLI="-lbrotlidec -lbrotlicommon"; fi
-          echo "BROTLI=$BROTLI"
-          ls $PORT/lib | head -n 50
-          $GCC -O2 -Wall $MACH -I$DEVKITPRO/libogc/include -I$PORT/include -I$PORT/include/freetype2 -I$INC -c main.c -o main.o
-          $GCC $MACH -L$DEVKITPRO/libogc/lib/wii -L$PORT/lib -L$LIB main.o -Wl,--start-group -lgrrlib -lfreetype $BROTLI -lpng -ljpeg -lbz2 -lz -Wl,--end-group -lfat -lwiiuse -lbte -logc -lm -o boot.elf
+
+          PNGU_OBJ=""
+          PNGU_LIB=""
+          PNGU_LIBFILE=$(find / -name libpngu.a 2>/dev/null | head -n 1)
+          PNGU_C=$(find /tmp/GRRLIB -name pngu.c 2>/dev/null | head -n 1)
+          if [ -n "$PNGU_LIBFILE" ]; then
+            echo "Uso libpngu.a: $PNGU_LIBFILE"
+            PNGU_LIB="-L$(dirname $PNGU_LIBFILE) -lpngu"
+          elif [ -n "$PNGU_C" ]; then
+            echo "Compilo pngu.c: $PNGU_C"
+            $GCC -O2 $MACH $BASEINC -I$(dirname $PNGU_C) -c $PNGU_C -o pngu.o
+            PNGU_OBJ=pngu.o
+          else
+            echo "PNGU NON TROVATO - albero di GRRLIB:"
+            find /tmp/GRRLIB -maxdepth 3 | head -n 100
+          fi
+
+          $GCC -O2 -Wall $MACH $BASEINC -I$INC -c main.c -o main.o
+          $GCC $MACH -L$DEVKITPRO/libogc/lib/wii -L$PORT/lib -L$LIB main.o $PNGU_OBJ -Wl,--start-group -lgrrlib $PNGU_LIB -lfreetype $BROTLI -lpng -ljpeg -lbz2 -lz -Wl,--end-group -lfat -lwiiuse -lbte -logc -lm -o boot.elf
           (which elf2dol && elf2dol boot.elf boot.dol) || $DEVKITPRO/tools/bin/elf2dol boot.elf boot.dol
           ls -l boot.dol
 
