@@ -14,7 +14,12 @@ jobs:
       - name: Installa dipendenze
         run: |
           dkp-pacman -Syu --noconfirm
-          dkp-pacman -S --noconfirm libogc libfat-ogc ppc-freetype ppc-libpng ppc-libjpeg-turbo ppc-zlib ppc-bzip2 git make
+          dkp-pacman -S --noconfirm libogc libfat-ogc ppc-freetype ppc-libpng ppc-libjpeg-turbo ppc-zlib ppc-bzip2
+
+      - name: Controlla git e make
+        run: |
+          which git || (apt-get update && apt-get install -y git)
+          which make || (apt-get update && apt-get install -y make)
 
       - name: Compila GRRLIB
         run: |
