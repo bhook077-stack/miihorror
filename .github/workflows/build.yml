@@ -18,12 +18,26 @@ jobs:
 
       - name: Compila GRRLIB
         run: |
-          git clone --depth 1 https://github.com/GRRLIB/GRRLIB.git
-          cd GRRLIB/GRRLIB
+          git clone --depth 1 https://github.com/GRRLIB/GRRLIB.git /tmp/GRRLIB
+          cd /tmp/GRRLIB/GRRLIB
           make clean all install
 
       - name: Compila il gioco
-        run: make
+        run: |
+          echo "--- dove sono finiti i file di GRRLIB ---"
+          find / -name "grrlib.h" 2>/dev/null
+          find / -name "libgrrlib.a" 2>/dev/null
+          INC=$(dirname "$(find / -name grrlib.h 2>/dev/null | head -n 1)")
+          LIB=$(dirname "$(find / -name libgrrlib.a 2>/dev/null | head -n 1)")
+          echo "INC=$INC"
+          echo "LIB=$LIB"
+          PORT=$DEVKITPRO/portlibs/ppc
+          GCC=$DEVKITPPC/bin/powerpc-eabi-gcc
+          MACH="-DGEKKO -mrvl -mcpu=750 -meabi -mhard-float"
+          $GCC -O2 -Wall $MACH -I$DEVKITPRO/libogc/include -I$PORT/include -I$PORT/include/freetype2 -I$INC -c main.c -o main.o
+          $GCC $MACH -L$DEVKITPRO/libogc/lib/wii -L$PORT/lib -L$LIB main.o -lgrrlib -lpng -ljpeg -lfreetype -lbz2 -lz -lfat -lwiiuse -lbte -logc -lm -o boot.elf
+          (which elf2dol && elf2dol boot.elf boot.dol) || $DEVKITPRO/tools/bin/elf2dol boot.elf boot.dol
+          ls -l boot.dol
 
       - name: Salva il risultato
         uses: actions/upload-artifact@v4
